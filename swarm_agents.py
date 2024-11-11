@@ -5,6 +5,7 @@ from openai import OpenAI
 from typing import List, Dict
 from dataclasses import dataclass
 import os
+from report_generator import ReportGenerator
 
 # Initialize OpenAI client first, then pass to Swarm
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -87,6 +88,41 @@ insight_agent = Agent(
     functions=[generate_insight]
 )
 
+def generate_structured_report(analyses: List[str]) -> str:
+    """Genera un reporte estructurado con secciones definidas"""
+    return "\n".join(analyses)
+
+reporter_agent = Agent(
+    name="ReportStructurer",
+    model=gpt_model,
+    instructions="""Estructura el reporte final en el siguiente formato:
+    # Reporte de Análisis de Transacción
+    
+    ## Resumen Ejecutivo
+    [Resumen breve de los hallazgos principales]
+    
+    ## Detalles del Análisis
+    ### Análisis de Riesgo
+    [Detalles del análisis de riesgo]
+    
+    ### Análisis de Cumplimiento
+    [Detalles del análisis de cumplimiento]
+    
+    ### Análisis de Valor
+    [Detalles del análisis de valor]
+    
+    ### Análisis Temporal
+    [Detalles del análisis temporal]
+    
+    ### Análisis de Cadena
+    [Detalles del análisis de cadena]
+    
+    ## Conclusiones y Recomendaciones
+    [Conclusiones finales y acciones recomendadas]
+    """,
+    functions=[generate_structured_report]
+)
+
 #### Orchestration ####
 
 def analyze_transaction(transaction: TransactionData):
@@ -97,7 +133,7 @@ def analyze_transaction(transaction: TransactionData):
     messages = [{"role": "user", "content": "Begin transaction analysis"}]
     
     # Run each agent in sequence with error handling
-    agents = [risk_agent, compliance_agent, value_agent, timing_agent, chain_agent, insight_agent]
+    agents = [risk_agent, compliance_agent, value_agent, timing_agent, chain_agent, insight_agent, reporter_agent]
     analyses = []
     
     try:
@@ -113,7 +149,7 @@ def analyze_transaction(transaction: TransactionData):
     except Exception as e:
         return f"Error during analysis: {str(e)}"
     
-    return analyses[-1]  # Return the final consolidated report
+    return analyses[-1]  # Return the final structured report
 
 def main():
     # Example transaction data
@@ -138,6 +174,12 @@ def create_analysis_input(tx_data: dict) -> TransactionData:
         chain_id=tx_data['chain_id'],
         flags=tx_data.get('flags', [])  # Asume una lista vacía si 'flags' no está presente
     )
+
+def generate_pdf_report(analyses: List[str]) -> str:
+    """Convert analysis report to PDF with markdown formatting"""
+    report_content = analyses[0]  # Tomamos el reporte consolidado del insight_agent
+    generator = ReportGenerator()
+    return generator.generate_pdf(report_content)
 
 if __name__ == "__main__":
     main()
