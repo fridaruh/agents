@@ -10,9 +10,6 @@ from datetime import datetime
 ### pip3 install git+https://github.com/openai/swarm.git
 ### pip3 install openai==1.55.3
 
-# Modelo GPT a utilizar
-os.environ["OPENAI_API_KEY"] = "APIKEY"
-
 client = Swarm()
 gpt_model = "gpt-4o-mini"
 fecha_generacion = str(datetime.now())
